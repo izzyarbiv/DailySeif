@@ -22,7 +22,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db, googleProvider } from '@/lib/firebase';
+import { auth, db, googleProvider, isConfigured, assertFirebaseConfigured } from '@/lib/firebase';
 import type { User } from '@/types';
 
 interface AuthContextType {
@@ -88,7 +88,7 @@ async function fetchOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<User> {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isConfigured);
 
   const refreshUser = useCallback(async () => {
     if (!firebaseUser) return;
@@ -97,6 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firebaseUser]);
 
   useEffect(() => {
+    if (!isConfigured) {
+      return;
+    }
+
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
@@ -116,15 +120,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    assertFirebaseConfigured();
     await signInWithEmailAndPassword(auth, email, password);
   };
 
   const signUp = async (email: string, password: string, displayName: string) => {
+    assertFirebaseConfigured();
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName });
   };
 
   const signInWithGoogle = async () => {
+    assertFirebaseConfigured();
     await signInWithPopup(auth, googleProvider);
   };
 
@@ -135,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
+    assertFirebaseConfigured();
     await sendPasswordResetEmail(auth, email);
   };
 
@@ -158,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

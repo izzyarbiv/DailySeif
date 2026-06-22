@@ -73,6 +73,7 @@ export function useSaveProgress() {
     }) => {
       const ref = doc(db, 'progress', `${userId}_${lessonId}`);
       const snap = await getDoc(ref);
+      const current = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
 
       const update: Record<string, unknown> = {
         userId,
@@ -83,7 +84,8 @@ export function useSaveProgress() {
       if (notes !== undefined) update.notes = notes;
       if (completed !== undefined) {
         update.completed = completed;
-        if (completed) {
+        const wasCompleted = (current?.completed as boolean) ?? false;
+        if (completed && !wasCompleted) {
           update.completedAt = serverTimestamp();
           // increment lesson completion count
           const lessonRef = doc(db, 'lessons', lessonId);
@@ -97,7 +99,7 @@ export function useSaveProgress() {
       if (snap.exists()) {
         await updateDoc(ref, update);
       } else {
-        await setDoc(ref, { ...update, completed: false, watchedSeconds: 0, notes: '' });
+        await setDoc(ref, { completed: false, watchedSeconds: 0, notes: '', ...update });
       }
     },
     onSuccess: (_data, vars) => {

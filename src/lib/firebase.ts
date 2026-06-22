@@ -22,18 +22,43 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Validate config
-const isConfigured = Object.values(firebaseConfig).every(
-  (v) => v && v !== 'undefined'
-);
+const firebaseEnvVarNames: Record<keyof typeof firebaseConfig, string> = {
+  apiKey: 'VITE_FIREBASE_API_KEY',
+  authDomain: 'VITE_FIREBASE_AUTH_DOMAIN',
+  projectId: 'VITE_FIREBASE_PROJECT_ID',
+  storageBucket: 'VITE_FIREBASE_STORAGE_BUCKET',
+  messagingSenderId: 'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  appId: 'VITE_FIREBASE_APP_ID',
+};
+
+const missingFirebaseEnv = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value || value === 'undefined')
+  .map(([key]) => key);
+
+const isConfigured = missingFirebaseEnv.length === 0;
 
 if (!isConfigured) {
-  console.warn(
-    '⚠️  Firebase is not configured. Copy .env.example to .env.local and fill in your Firebase credentials.'
+  console.error(
+    [
+      'Firebase is not fully configured.',
+      'Set the missing Vite env vars and restart the dev server:',
+      ...missingFirebaseEnv.map((key) => `- ${firebaseEnvVarNames[key as keyof typeof firebaseConfig]}`),
+    ].join('\n')
   );
 }
 
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(
+  isConfigured
+    ? firebaseConfig
+    : {
+      apiKey: 'missing',
+      authDomain: 'missing.firebaseapp.com',
+      projectId: 'missing-project',
+      storageBucket: 'missing.appspot.com',
+      messagingSenderId: '0',
+      appId: '1:0:web:0',
+    }
+);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
@@ -47,6 +72,16 @@ if (import.meta.env.VITE_USE_EMULATORS === 'true') {
   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, 'localhost', 8080);
   connectStorageEmulator(storage, 'localhost', 9199);
+}
+
+export function assertFirebaseConfigured() {
+  if (isConfigured) return;
+
+  throw new Error(
+    `Firebase config missing. Please set ${missingFirebaseEnv
+      .map((key) => firebaseEnvVarNames[key as keyof typeof firebaseConfig])
+      .join(', ')} in your environment.`
+  );
 }
 
 export { isConfigured };

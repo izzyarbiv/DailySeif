@@ -39,7 +39,8 @@ export default function LessonViewer() {
   const saveProgress = useSaveProgress();
   const toggleBookmark = useToggleBookmark();
 
-  const [notes, setNotes] = useState('');
+  const [notesDraft, setNotesDraft] = useState('');
+  const [notesTouched, setNotesTouched] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
@@ -49,11 +50,7 @@ export default function LessonViewer() {
 
   const isBookmarked = user?.bookmarks?.includes(id || '') ?? false;
   const isCompleted = progress?.completed ?? false;
-
-  // Load saved notes
-  useEffect(() => {
-    if (progress?.notes) setNotes(progress.notes);
-  }, [progress?.notes]);
+  const notes = notesTouched ? notesDraft : (progress?.notes ?? '');
 
   // Load saved position
   useEffect(() => {
@@ -63,6 +60,12 @@ export default function LessonViewer() {
       }
     }
   }, [playerReady, progress?.watchedSeconds]);
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(saveTimer.current);
+    };
+  }, []);
 
   // Save position via timeupdate
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -95,6 +98,7 @@ export default function LessonViewer() {
     if (!user?.uid || !id) return;
     setSavingNote(true);
     await saveProgress.mutateAsync({ userId: user.uid, lessonId: id, notes });
+    setNotesTouched(false);
     toast.success('Notes saved!');
     setSavingNote(false);
   };
@@ -286,7 +290,10 @@ export default function LessonViewer() {
                 </h3>
                 <textarea
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={(e) => {
+                    setNotesTouched(true);
+                    setNotesDraft(e.target.value);
+                  }}
                   rows={6}
                   placeholder="Write your notes about this lesson here…"
                   className="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
