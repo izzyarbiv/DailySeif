@@ -64,27 +64,27 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-gradient-to-br from-[#f2f4f8] via-[#e9f1fb] to-[#ffffff]">
       {/* Left panel */}
-      <div className="hidden lg:flex flex-col justify-center items-center w-1/2 bg-gradient-hero px-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+      <div className="hidden lg:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-[#17365f] via-[#1c3d6e] to-[#2a5688] px-12 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
           <div className="absolute top-20 left-10 text-8xl font-bold text-white select-none">ס</div>
           <div className="absolute bottom-32 right-12 text-9xl font-bold text-white select-none">ת</div>
           <div className="absolute top-1/2 left-1/3 text-7xl font-bold text-white select-none">ל</div>
         </div>
         <div className="relative z-10 text-center max-w-sm">
-          <div className="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
+          <div className="h-16 w-16 bg-white/15 border border-white/25 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
             <BookOpen className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">DailySeif</h1>
-          <p className="text-blue-200 text-lg leading-relaxed">
-            Learn Torah daily with R' Saks. Quality shiurim, organized and accessible.
+          <p className="text-[#d9e6f5] text-lg leading-relaxed">
+            Learn Torah daily. Quality shiurim, organized and accessible.
           </p>
           <div className="mt-10 grid grid-cols-3 gap-4 text-center">
             {[['100+', 'Shiurim'], ['5K+', 'Students'], ['Daily', 'Updates']].map(([num, label]) => (
-              <div key={label} className="bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+              <div key={label} className="bg-white/10 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
                 <div className="text-2xl font-bold text-white">{num}</div>
-                <div className="text-blue-200 text-sm">{label}</div>
+                <div className="text-[#d9e6f5] text-sm">{label}</div>
               </div>
             ))}
           </div>
@@ -97,18 +97,18 @@ export default function SignIn() {
           {/* Mobile logo */}
           <div className="flex justify-center mb-8 lg:hidden">
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center">
+              <div className="h-10 w-10 bg-gradient-to-br from-[#17365f] to-[#2a5688] rounded-xl flex items-center justify-center shadow-sm">
                 <BookOpen className="h-5 w-5 text-white" />
               </div>
               <span className="text-2xl font-bold text-gray-900">DailySeif</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          <div className="bg-white rounded-2xl shadow-lg shadow-[#1c3d6e]/10 border border-[#e1e7ef] p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-1">
               {forgotMode ? 'Reset Password' : 'Welcome back'}
             </h2>
-            <p className="text-gray-500 mb-8">
+            <p className="text-[#65758b] mb-8">
               {forgotMode
                 ? 'Enter your email to receive a reset link'
                 : "Sign in to continue your learning"}
@@ -122,7 +122,7 @@ export default function SignIn() {
                   fullWidth
                   loading={googleLoading}
                   onClick={handleGoogle}
-                  className="mb-4"
+                  className="mb-4 border-[#d1dbe8] text-[#1f2937] hover:bg-[#f2f4f8]"
                   leftIcon={
                     <svg className="h-4 w-4" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -157,7 +157,7 @@ export default function SignIn() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                    className="w-full pl-10 pr-4 py-2.5 border border-[#d1dbe8] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1c3d6e] focus:border-transparent transition-shadow"
                   />
                 </div>
               </div>
@@ -173,7 +173,7 @@ export default function SignIn() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-10 py-2.5 border border-[#d1dbe8] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1c3d6e] focus:border-transparent"
                     />
                     <button
                       type="button"
@@ -191,7 +191,7 @@ export default function SignIn() {
                   <button
                     type="button"
                     onClick={() => setForgotMode(true)}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="text-sm text-[#1c3d6e] hover:underline"
                   >
                     Forgot password?
                   </button>
@@ -207,14 +207,14 @@ export default function SignIn() {
                 )}
               </div>
 
-              <Button type="submit" fullWidth loading={loading} size="lg">
+              <Button type="submit" fullWidth loading={loading} size="lg" className="bg-[#1c3d6e] hover:bg-[#16345e] active:bg-[#122b4d] focus:ring-[#1c3d6e]">
                 {forgotMode ? 'Send Reset Link' : 'Sign In'}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-blue-600 font-medium hover:underline">
+              <Link to="/signup" className="text-[#1c3d6e] font-medium hover:underline">
                 Create one free
               </Link>
             </p>

@@ -57,21 +57,21 @@ export default function SignUp() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-gradient-to-br from-[#f2f4f8] via-[#e9f1fb] to-[#ffffff]">
       {/* Left panel */}
-      <div className="hidden lg:flex flex-col justify-center items-center w-1/2 bg-gradient-hero px-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+      <div className="hidden lg:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-[#17365f] via-[#1c3d6e] to-[#2a5688] px-12 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
           <div className="absolute top-24 right-10 text-8xl font-bold text-white select-none">ד</div>
           <div className="absolute bottom-24 left-10 text-9xl font-bold text-white select-none">א</div>
           <div className="absolute top-1/2 right-1/3 text-7xl font-bold text-white select-none">י</div>
         </div>
         <div className="relative z-10 text-center max-w-sm">
-          <div className="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
+          <div className="h-16 w-16 bg-white/15 border border-white/25 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
             <BookOpen className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">Join DailySeif</h1>
-          <p className="text-blue-200 text-lg leading-relaxed">
-            Start your daily Torah learning journey with R' Saks.
+          <p className="text-[#d9e6f5] text-lg leading-relaxed">
+            Start your daily Torah learning journey.
           </p>
           <div className="mt-8 space-y-3">
             {[
@@ -80,7 +80,7 @@ export default function SignUp() {
               '🔔 Daily learning reminders',
               '📝 Take notes on any lesson',
             ].map((f) => (
-              <div key={f} className="flex items-center gap-2 text-blue-100 text-sm">
+              <div key={f} className="flex items-center gap-2 text-[#e7eef9] text-sm">
                 <span>{f}</span>
               </div>
             ))}
@@ -94,16 +94,16 @@ export default function SignUp() {
           {/* Mobile logo */}
           <div className="flex justify-center mb-8 lg:hidden">
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center">
+              <div className="h-10 w-10 bg-gradient-to-br from-[#17365f] to-[#2a5688] rounded-xl flex items-center justify-center shadow-sm">
                 <BookOpen className="h-5 w-5 text-white" />
               </div>
               <span className="text-2xl font-bold text-gray-900">DailySeif</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          <div className="bg-white rounded-2xl shadow-lg shadow-[#1c3d6e]/10 border border-[#e1e7ef] p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Create your account</h2>
-            <p className="text-gray-500 mb-8">Free to join, learn at your own pace</p>
+            <p className="text-[#65758b] mb-8">Free to join, learn at your own pace</p>
 
             {/* Google */}
             <Button
@@ -111,7 +111,7 @@ export default function SignUp() {
               fullWidth
               loading={googleLoading}
               onClick={handleGoogle}
-              className="mb-4"
+              className="mb-4 border-[#d1dbe8] text-[#1f2937] hover:bg-[#f2f4f8]"
               leftIcon={
                 <svg className="h-4 w-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -144,7 +144,7 @@ export default function SignUp() {
                     onChange={(e) => setName(e.target.value)}
                     required
                     placeholder="Yisrael Yisraeli"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-[#d1dbe8] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1c3d6e] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -159,7 +159,7 @@ export default function SignUp() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-[#d1dbe8] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1c3d6e] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -174,7 +174,7 @@ export default function SignUp() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder="Min. 6 characters"
-                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-10 py-2.5 border border-[#d1dbe8] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1c3d6e] focus:border-transparent"
                   />
                   <button
                     type="button"
@@ -196,19 +196,19 @@ export default function SignUp() {
                     onChange={(e) => setConfirmPw(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 border border-[#d1dbe8] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1c3d6e] focus:border-transparent"
                   />
                 </div>
               </div>
 
-              <Button type="submit" fullWidth loading={loading} size="lg">
+              <Button type="submit" fullWidth loading={loading} size="lg" className="bg-[#1c3d6e] hover:bg-[#16345e] active:bg-[#122b4d] focus:ring-[#1c3d6e]">
                 Create Account
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-600">
               Already have an account?{' '}
-              <Link to="/signin" className="text-blue-600 font-medium hover:underline">
+              <Link to="/signin" className="text-[#1c3d6e] font-medium hover:underline">
                 Sign in
               </Link>
             </p>
