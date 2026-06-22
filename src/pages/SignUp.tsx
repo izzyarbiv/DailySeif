@@ -33,9 +33,12 @@ export default function SignUp() {
       toast.success('Welcome to DailySeif! 🎉');
       navigate('/dashboard');
     } catch (err: unknown) {
+      const errMessage = (err as { message?: string })?.message || '';
       const code = (err as { code?: string })?.code;
       if (code === 'auth/email-already-in-use') {
         toast.error('Email already in use. Try signing in.');
+      } else if (errMessage.includes('Firebase config missing')) {
+        toast.error('Backend is not configured yet. Add VITE_FIREBASE_* env vars and redeploy.');
       } else {
         toast.error('Sign-up failed. Please try again.');
       }
@@ -49,8 +52,13 @@ export default function SignUp() {
     try {
       await signInWithGoogle();
       navigate('/dashboard');
-    } catch {
-      toast.error('Google sign-in failed.');
+    } catch (err: unknown) {
+      const errMessage = (err as { message?: string })?.message || '';
+      if (errMessage.includes('Firebase config missing')) {
+        toast.error('Backend is not configured yet. Add VITE_FIREBASE_* env vars and redeploy.');
+      } else {
+        toast.error('Google sign-in failed.');
+      }
     } finally {
       setGoogleLoading(false);
     }

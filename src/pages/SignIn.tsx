@@ -40,9 +40,12 @@ export default function SignIn() {
       await signIn(email, password);
       navigate(from, { replace: true });
     } catch (err: unknown) {
+      const errMessage = (err as { message?: string })?.message || '';
       const msg = (err as { code?: string })?.code;
       if (msg === 'auth/user-not-found' || msg === 'auth/wrong-password' || msg === 'auth/invalid-credential') {
         toast.error('Invalid email or password.');
+      } else if (errMessage.includes('Firebase config missing')) {
+        toast.error('Backend is not configured yet. Add VITE_FIREBASE_* env vars and redeploy.');
       } else {
         toast.error('Sign-in failed. Please try again.');
       }
@@ -56,8 +59,13 @@ export default function SignIn() {
     try {
       await signInWithGoogle();
       navigate(from, { replace: true });
-    } catch {
-      toast.error('Google sign-in failed.');
+    } catch (err: unknown) {
+      const errMessage = (err as { message?: string })?.message || '';
+      if (errMessage.includes('Firebase config missing')) {
+        toast.error('Backend is not configured yet. Add VITE_FIREBASE_* env vars and redeploy.');
+      } else {
+        toast.error('Google sign-in failed.');
+      }
     } finally {
       setGoogleLoading(false);
     }

@@ -34,17 +34,16 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-40 glass border-b border-gray-200 shadow-sm">
+    <nav className="fixed top-0 left-0 right-0 z-40 glass border-b border-[#e1e7ef] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to={user ? '/dashboard' : '/'} className="flex items-center gap-2.5 group">
-            <div className="h-9 w-9 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+            <div className="h-9 w-9 bg-gradient-to-br from-[#17365f] to-[#2a5688] rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
             <div className="leading-tight">
               <span className="font-bold text-gray-900 text-lg">DailySeif</span>
-              <span className="block text-xs text-gray-500 leading-none">R' Saks</span>
             </div>
           </Link>
 
@@ -57,8 +56,8 @@ export default function Navbar() {
                   to={to}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     location.pathname.startsWith(to)
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'bg-[#e9f1fb] text-[#1c3d6e]'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-[#f2f4f8]'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -73,7 +72,7 @@ export default function Navbar() {
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-[#f2f4f8] transition-colors"
                 >
                   <Avatar src={user.photoURL} name={user.displayName} size="sm" />
                   <div className="hidden sm:block text-left">
@@ -81,7 +80,7 @@ export default function Navbar() {
                       {user.displayName || 'Student'}
                     </p>
                     {isAdmin && (
-                      <span className="text-xs text-amber-600 font-medium flex items-center gap-0.5">
+                      <span className="text-xs text-[#1c3d6e] font-medium flex items-center gap-0.5">
                         <Star className="h-3 w-3" /> Admin
                       </span>
                     )}
@@ -92,15 +91,15 @@ export default function Navbar() {
                 {dropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
-                      <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-[#e1e7ef] py-1 z-20">
+                      <div className="px-4 py-3 border-b border-[#e1e7ef]">
                         <p className="text-sm font-semibold text-gray-900 truncate">{user.displayName}</p>
                         <p className="text-xs text-gray-500 truncate">{user.email}</p>
                       </div>
                       <Link
                         to="/profile"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-[#f2f4f8] transition-colors"
                       >
                         <User className="h-4 w-4" /> My Profile
                       </Link>
@@ -108,7 +107,7 @@ export default function Navbar() {
                         <Link
                           to="/upload"
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition-colors"
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#1c3d6e] hover:bg-[#e9f1fb] transition-colors"
                         >
                           <Upload className="h-4 w-4" /> Upload Class
                         </Link>
@@ -127,10 +126,10 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center gap-2">
                 <Link to="/signin">
-                  <Button variant="ghost" size="sm">Sign In</Button>
+                  <Button variant="ghost" size="sm" className="text-gray-700 hover:bg-[#f2f4f8]">Sign In</Button>
                 </Link>
                 <Link to="/signup">
-                  <Button size="sm">Get Started</Button>
+                    <Button size="sm" className="bg-[#1c3d6e] hover:bg-[#16345e] active:bg-[#122b4d] focus:ring-[#1c3d6e]">Get Started</Button>
                 </Link>
               </div>
             )}
@@ -156,10 +155,10 @@ export default function Navbar() {
               key={to}
               to={to}
               onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname.startsWith(to)
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-[#e9f1fb] text-[#1c3d6e]'
+                  : 'text-gray-700 hover:bg-[#f2f4f8]'
               }`}
             >
               <Icon className="h-4 w-4" />

@@ -169,8 +169,13 @@ export default function UploadClass() {
         videoUrl: '', pdfUrl: '', thumbnailUrl: '', duration: '', tags: '',
         isPublished: true, order: '',
       });
-    } catch {
-      toast.error('Upload failed. Please try again.');
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code || '';
+      if (code.includes('permission-denied')) {
+        toast.error('Permission denied. Sign out/in after setting your account as admin.');
+      } else {
+        toast.error('Upload failed. Please try again.');
+      }
     }
   };
 

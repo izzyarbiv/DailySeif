@@ -45,16 +45,27 @@ const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e
 async function fetchOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<User> {
   const ref = doc(db, 'users', firebaseUser.uid);
   const snap = await getDoc(ref);
+  const email = (firebaseUser.email || '').toLowerCase();
+  const isEmailAdmin = ADMIN_EMAILS.includes(email);
 
   if (snap.exists()) {
     const data = snap.data();
-    await updateDoc(ref, { lastLoginAt: serverTimestamp() });
+    const shouldPromoteToAdmin = isEmailAdmin && data.role !== 'admin';
+    await updateDoc(ref, {
+      lastLoginAt: serverTimestamp(),
+      ...(shouldPromoteToAdmin ? { role: 'admin' } : {}),
+    });
+
+    const effectiveRole = shouldPromoteToAdmin
+      ? 'admin'
+      : (isEmailAdmin ? 'admin' : (data.role || 'student'));
+
     return {
       uid: firebaseUser.uid,
       email: firebaseUser.email,
       displayName: firebaseUser.displayName,
       photoURL: firebaseUser.photoURL,
-      role: ADMIN_EMAILS.includes((firebaseUser.email || '').toLowerCase()) ? 'admin' : (data.role || 'student'),
+      role: effectiveRole,
       createdAt: data.createdAt?.toDate() || new Date(),
       lastLoginAt: new Date(),
       streak: data.streak || 0,
@@ -63,7 +74,7 @@ async function fetchOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<User> {
     };
   }
 
-  const isAdmin = ADMIN_EMAILS.includes((firebaseUser.email || '').toLowerCase());
+  const isAdmin = isEmailAdmin;
   const newUser: Omit<User, 'uid'> = {
     email: firebaseUser.email,
     displayName: firebaseUser.displayName,
