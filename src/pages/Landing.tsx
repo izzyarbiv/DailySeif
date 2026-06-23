@@ -186,25 +186,6 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-y border-[#e1e7ef] bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              {[
-                { num: lessons.length || '—', label: 'Recent lessons', sub: 'published and growing' },
-                { num: 'Daily', label: 'Learning', sub: 'consistent study flow' },
-                { num: isAdmin ? 'Admin' : 'Student', label: 'Access level', sub: 'based on your role' },
-                { num: 'Free', label: 'Access', sub: 'no credit card' },
-              ].map(({ num, label, sub }) => (
-                <div key={label}>
-                  <div className="text-3xl font-extrabold text-[#1c3d6e]">{num}</div>
-                  <div className="font-semibold text-[#1f2937]">{label}</div>
-                  <div className="text-sm text-[#65758b]">{sub}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div className="flex items-center justify-between gap-4 mb-6">
