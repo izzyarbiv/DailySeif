@@ -10,7 +10,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   updateProfile,
   sendPasswordResetEmail,
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     assertFirebaseConfigured();
-    await signInWithPopup(auth, googleProvider);
+    await signInWithRedirect(auth, googleProvider);
   };
 
   const logout = async () => {

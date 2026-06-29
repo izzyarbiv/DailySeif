@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { BookOpen, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 
 export default function SignIn() {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
@@ -19,6 +19,12 @@ export default function SignIn() {
   const [forgotMode, setForgotMode] = useState(false);
 
   const { resetPassword } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      navigate(from, { replace: true });
+    }
+  }, [from, navigate, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +64,6 @@ export default function SignIn() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-      navigate(from, { replace: true });
     } catch (err: unknown) {
       const errMessage = (err as { message?: string })?.message || '';
       if (errMessage.includes('Firebase config missing')) {
