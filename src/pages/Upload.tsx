@@ -1,16 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Upload,
-  FileText,
-  Image,
+  Video,
   X,
   CheckCircle2,
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import { authorizeYouTube, uploadVideoToYouTube } from '@/lib/youtube';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLesson, useAllLessons, useDeleteLesson, useUpdateLesson } from '@/hooks/useLessons';
 import Layout from '@/components/layout/Layout';
@@ -21,92 +19,150 @@ import { CATEGORY_LABELS, type LessonCategory } from '@/types';
 import { formatDate, truncate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-interface UploadState {
-  progress: number;
-  status: 'idle' | 'uploading' | 'done' | 'error';
-  url?: string;
-}
+type VideoUploadStatus = 'idle' | 'uploading' | 'done' | 'error';
 
-function FileDropzone({
-  label,
-  accept,
-  onUploaded,
-  folder,
-  icon: Icon,
+function VideoUploadSection({
+  videoUrl,
+  onChange,
+  title,
 }: {
-  label: string;
-  accept: Record<string, string[]>;
-  onUploaded: (url: string) => void;
-  folder: string;
-  icon: React.ElementType;
+  videoUrl: string;
+  onChange: (url: string) => void;
+  title: string;
 }) {
-  const [upload, setUpload] = useState<UploadState>({ progress: 0, status: 'idle' });
+  const [tab, setTab] = useState<'url' | 'upload'>('url');
+  const [ytToken, setYtToken] = useState<string | null>(null);
+  const [status, setStatus] = useState<VideoUploadStatus>('idle');
+  const [progress, setProgress] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const onDrop = useCallback(
-    async (files: File[]) => {
+  const handleAuth = async () => {
+    try {
+      const token = await authorizeYouTube();
+      setYtToken(token);
+      toast.success('YouTube connected!');
+    } catch {
+      toast.error('Could not connect to YouTube. Try again.');
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { 'video/mp4': ['.mp4'], 'video/quicktime': ['.mov'], 'video/x-msvideo': ['.avi'], 'video/x-matroska': ['.mkv'] },
+    maxFiles: 1,
+    disabled: !ytToken || status === 'uploading',
+    onDrop: async (files) => {
       const file = files[0];
-      if (!file) return;
-      setUpload({ progress: 0, status: 'uploading' });
-      const path = `${folder}/${Date.now()}_${file.name}`;
-      const ref = storageRef(storage, path);
-      const task = uploadBytesResumable(ref, file);
-      task.on(
-        'state_changed',
-        (snap) => setUpload((u) => ({ ...u, progress: Math.round((snap.bytesTransferred / snap.totalBytes) * 100) })),
-        () => {
-          setUpload({ progress: 0, status: 'error' });
-          toast.error('Upload failed');
-        },
-        async () => {
-          const url = await getDownloadURL(task.snapshot.ref);
-          setUpload({ progress: 100, status: 'done', url });
-          onUploaded(url);
-          toast.success(`${label} uploaded!`);
-        }
-      );
+      if (!file || !ytToken) return;
+      setStatus('uploading');
+      setProgress(0);
+      setErrorMsg('');
+      try {
+        const url = await uploadVideoToYouTube(
+          ytToken,
+          file,
+          title || file.name.replace(/\.[^.]+$/, ''),
+          title,
+          (pct) => setProgress(pct)
+        );
+        onChange(url);
+        setStatus('done');
+        toast.success('Video uploaded! It will be ready to watch in ~2 minutes.');
+      } catch (e: unknown) {
+        setStatus('error');
+        setErrorMsg((e as Error).message);
+        toast.error('Upload failed. Try again.');
+      }
     },
-    [folder, label, onUploaded]
-  );
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept, maxFiles: 1 });
+  });
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      {upload.status === 'done' ? (
-        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
-          <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-          <span className="truncate">Uploaded successfully</span>
-          <button onClick={() => setUpload({ progress: 0, status: 'idle' })} className="ml-auto text-green-500 hover:text-green-700">
-            <X className="h-4 w-4" />
+      <label className="block text-sm font-medium text-gray-700 mb-1.5">Video</label>
+      <div className="flex gap-1 mb-3 p-1 bg-gray-100 rounded-lg w-fit">
+        {(['url', 'upload'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              tab === t ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t === 'url' ? 'Paste URL' : 'Upload MP4'}
           </button>
-        </div>
-      ) : upload.status === 'uploading' ? (
-        <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
-          <div className="flex items-center gap-2 text-sm text-blue-700 mb-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading… {upload.progress}%
-          </div>
-          <div className="h-2 bg-blue-200 rounded-full">
-            <div className="h-2 bg-blue-600 rounded-full transition-all" style={{ width: `${upload.progress}%` }} />
-          </div>
-        </div>
+        ))}
+      </div>
+
+      {tab === 'url' ? (
+        <input
+          type="url"
+          value={videoUrl}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="https://www.youtube.com/watch?v=..."
+          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       ) : (
-        <div
-          {...getRootProps()}
-          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-            isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-          } ${upload.status === 'error' ? 'border-red-300 bg-red-50' : ''}`}
-        >
-          <input {...getInputProps()} />
-          <Icon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">
-            {isDragActive ? 'Drop here…' : 'Drag & drop or click to browse'}
-          </p>
-          {upload.status === 'error' && (
-            <p className="text-xs text-red-500 mt-1 flex items-center justify-center gap-1">
-              <AlertCircle className="h-3 w-3" /> Upload failed. Try again.
-            </p>
+        <div className="space-y-3">
+          {!ytToken ? (
+            <button
+              type="button"
+              onClick={handleAuth}
+              className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full justify-center"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-red-500" aria-hidden="true">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+              </svg>
+              Connect YouTube to Upload
+            </button>
+          ) : status === 'done' ? (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+              <span>Uploaded! YouTube is processing — video will be ready in ~2 min.</span>
+              <button
+                type="button"
+                onClick={() => { setStatus('idle'); onChange(''); }}
+                className="ml-auto text-green-500 hover:text-green-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : status === 'uploading' ? (
+            <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
+              <div className="flex items-center gap-2 text-sm text-blue-700 mb-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Uploading to YouTube… {progress}%
+              </div>
+              <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
+                <div
+                  className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              {status === 'error' && (
+                <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                  {errorMsg || 'Upload failed. Try again.'}
+                </p>
+              )}
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                  isDragActive
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                } ${status === 'error' ? 'border-red-300 bg-red-50' : ''}`}
+              >
+                <input {...getInputProps()} />
+                <Video className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">
+                  {isDragActive ? 'Drop video here…' : 'Drag & drop or click to browse'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">MP4, MOV, AVI, MKV — any size</p>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -319,38 +375,36 @@ export default function UploadClass() {
                   />
                 </div>
 
-                {/* Video URL */}
+                {/* Video */}
+                <VideoUploadSection
+                  videoUrl={form.videoUrl}
+                  onChange={(url) => handleChange('videoUrl', url)}
+                  title={form.title}
+                />
+
+                {/* PDF link */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Video URL (YouTube / Vimeo / direct)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">PDF Sourcesheet URL</label>
                   <input
                     type="url"
-                    value={form.videoUrl}
-                    onChange={(e) => handleChange('videoUrl', e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={form.pdfUrl}
+                    onChange={(e) => handleChange('pdfUrl', e.target.value)}
+                    placeholder="https://drive.google.com/..."
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                {/* PDF upload */}
-                <FileDropzone
-                  label="PDF Sourcesheet"
-                  accept={{ 'application/pdf': ['.pdf'] }}
-                  onUploaded={(url) => handleChange('pdfUrl', url)}
-                  folder="pdfs"
-                  icon={FileText}
-                />
-                {form.pdfUrl && (
-                  <input type="hidden" value={form.pdfUrl} />
-                )}
-
-                {/* Thumbnail upload */}
-                <FileDropzone
-                  label="Thumbnail Image"
-                  accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
-                  onUploaded={(url) => handleChange('thumbnailUrl', url)}
-                  folder="thumbnails"
-                  icon={Image}
-                />
+                {/* Thumbnail URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thumbnail Image URL</label>
+                  <input
+                    type="url"
+                    value={form.thumbnailUrl}
+                    onChange={(e) => handleChange('thumbnailUrl', e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
 
                 {/* Publish toggle */}
                 <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">

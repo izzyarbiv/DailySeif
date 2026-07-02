@@ -10,7 +10,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
   signOut,
   updateProfile,
   sendPasswordResetEmail,
@@ -42,19 +42,32 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim().toLowerCase());
 
-async function fetchOrCreateUserDoc(firebaseUser: FirebaseUser): Promise<User> {
+async function fetchOrCreateUserDoc(firebaseUser: FirebaseUser, attempt = 0): Promise<User> {
   const ref = doc(db, 'users', firebaseUser.uid);
-  const snap = await getDoc(ref);
+  let snap;
+  try {
+    snap = await getDoc(ref);
+  } catch (e) {
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      return fetchOrCreateUserDoc(firebaseUser, attempt + 1);
+    }
+    throw e;
+  }
   const email = (firebaseUser.email || '').toLowerCase();
   const isEmailAdmin = ADMIN_EMAILS.includes(email);
 
   if (snap.exists()) {
     const data = snap.data();
     const shouldPromoteToAdmin = isEmailAdmin && data.role !== 'admin';
-    await updateDoc(ref, {
-      lastLoginAt: serverTimestamp(),
-      ...(shouldPromoteToAdmin ? { role: 'admin' } : {}),
-    });
+    try {
+      await updateDoc(ref, {
+        lastLoginAt: serverTimestamp(),
+        ...(shouldPromoteToAdmin ? { role: 'admin' } : {}),
+      });
+    } catch {
+      // Non-fatal — user doc exists, just couldn't update lastLoginAt
+    }
 
     const effectiveRole = shouldPromoteToAdmin
       ? 'admin'
@@ -120,7 +133,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(u);
         } catch (e) {
           console.error('Failed to fetch user doc', e);
-          setUser(null);
+          // Fall back to minimal user from Firebase Auth so the session is not lost
+          const email = (fbUser.email || '').toLowerCase();
+          setUser({
+            uid: fbUser.uid,
+            email: fbUser.email,
+            displayName: fbUser.displayName,
+            photoURL: fbUser.photoURL,
+            role: ADMIN_EMAILS.includes(email) ? 'admin' : 'student',
+            createdAt: new Date(),
+            lastLoginAt: new Date(),
+            streak: 0,
+            totalLessonsCompleted: 0,
+            bookmarks: [],
+          });
         }
       } else {
         setUser(null);
@@ -143,7 +169,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     assertFirebaseConfigured();
-    await signInWithRedirect(auth, googleProvider);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code || '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+      if (code === 'auth/popup-blocked') {
+        throw new Error('Popup was blocked. Please allow popups for this site and try again.');
+      }
+      throw e;
+    }
   };
 
   const logout = async () => {

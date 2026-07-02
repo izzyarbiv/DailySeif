@@ -7,6 +7,7 @@ service cloud.firestore {
     match /lessons/{lessonId} {
       allow read: if request.auth != null;
       allow create, update, delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
@@ -17,7 +18,9 @@ service cloud.firestore {
 
     // Progress — users can only read/write their own progress
     match /progress/{docId} {
-      allow read, write: if request.auth != null &&
+      allow read: if request.auth != null &&
+        resource != null && resource.data.userId == request.auth.uid;
+      allow write: if request.auth != null &&
         (resource == null || resource.data.userId == request.auth.uid) &&
         request.resource.data.userId == request.auth.uid;
     }
