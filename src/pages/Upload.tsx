@@ -138,7 +138,7 @@ function VideoUploadSection({
       const file = files[0];
       if (!file || !ytToken) return;
       setStatus('uploading');
-      setProgress(0);
+      setProgress(-1); // -1 = checking resume
       setErrorMsg('');
       try {
         const url = await uploadVideoToYouTube(
@@ -218,14 +218,20 @@ function VideoUploadSection({
             <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
               <div className="flex items-center gap-2 text-sm text-blue-700 mb-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Uploading to YouTube… {progress}%
+                {progress < 0
+                  ? 'Checking for previous upload…'
+                  : progress > 0 && progress < 5
+                  ? `Resuming from ${progress}%…`
+                  : `Uploading to YouTube… ${progress}%`}
               </div>
-              <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
-                <div
-                  className="h-2 bg-blue-600 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+              {progress >= 0 && (
+                <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.max(progress, 0)}%` }}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div>
