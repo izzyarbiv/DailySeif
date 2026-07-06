@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Upload,
   Video,
+  FileText,
   X,
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Clock,
 } from 'lucide-react';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 import { authorizeYouTube, uploadVideoToYouTube } from '@/lib/youtube';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLesson, useAllLessons, useDeleteLesson, useUpdateLesson } from '@/hooks/useLessons';
@@ -19,7 +23,99 @@ import { CATEGORY_LABELS, type LessonCategory } from '@/types';
 import { formatDate, truncate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-type VideoUploadStatus = 'idle' | 'uploading' | 'done' | 'error';
+type UploadStatus = 'idle' | 'uploading' | 'done' | 'error';
+
+function PdfDropzone({ onUploaded }: { onUploaded: (url: string) => void }) {
+  const [status, setStatus] = useState<UploadStatus>('idle');
+  const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const onDrop = useCallback(async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    setFileName(file.name);
+    setStatus('uploading');
+    setProgress(0);
+    setErrorMsg('');
+
+    const path = `pdfs/${Date.now()}_${file.name}`;
+    const ref = storageRef(storage, path);
+    const task = uploadBytesResumable(ref, file);
+
+    task.on(
+      'state_changed',
+      (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
+      (err) => {
+        setStatus('error');
+        const msg = (err as { code?: string }).code === 'storage/unauthorized'
+          ? 'Storage not enabled. Go to Firebase Console → Storage → Get started.'
+          : err.message;
+        setErrorMsg(msg);
+        toast.error('PDF upload failed');
+      },
+      async () => {
+        const url = await getDownloadURL(task.snapshot.ref);
+        onUploaded(url);
+        setStatus('done');
+        toast.success('PDF uploaded!');
+      }
+    );
+  }, [onUploaded]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/pdf': ['.pdf'] },
+    maxFiles: 1,
+    disabled: status === 'uploading',
+  });
+
+  if (status === 'done') {
+    return (
+      <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+        <span className="truncate">{fileName}</span>
+        <button type="button" onClick={() => { setStatus('idle'); onUploaded(''); }} className="ml-auto text-green-500 hover:text-green-700">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'uploading') {
+    return (
+      <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
+        <div className="flex items-center gap-2 text-sm text-blue-700 mb-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Uploading {fileName}… {progress}%
+        </div>
+        <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
+          <div className="h-2 bg-blue-600 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      {...getRootProps()}
+      className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${
+        isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+      } ${status === 'error' ? 'border-red-300 bg-red-50' : ''}`}
+    >
+      <input {...getInputProps()} />
+      <FileText className="h-7 w-7 text-gray-400 mx-auto mb-1.5" />
+      <p className="text-sm text-gray-600">{isDragActive ? 'Drop PDF here…' : 'Drag & drop PDF or click to browse'}</p>
+      {status === 'error' && (
+        <p className="text-xs text-red-500 mt-1.5 flex items-center justify-center gap-1">
+          <AlertCircle className="h-3 w-3 flex-shrink-0" /> {errorMsg || 'Upload failed. Try again.'}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type VideoUploadStatus = 'idle' | 'uploading' | 'done' | 'error' | 'processing';
 
 function VideoUploadSection({
   videoUrl,
@@ -65,8 +161,8 @@ function VideoUploadSection({
           (pct) => setProgress(pct)
         );
         onChange(url);
-        setStatus('done');
-        toast.success('Video uploaded! It will be ready to watch in ~2 minutes.');
+        setStatus('processing');
+        toast.success('Uploaded to YouTube! Processing — give it 5–30 min before the video plays.');
       } catch (e: unknown) {
         setStatus('error');
         setErrorMsg((e as Error).message);
@@ -114,17 +210,19 @@ function VideoUploadSection({
               </svg>
               Connect YouTube to Upload
             </button>
-          ) : status === 'done' ? (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
-              <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-              <span>Uploaded! YouTube is processing — video will be ready in ~2 min.</span>
-              <button
-                type="button"
-                onClick={() => { setStatus('idle'); onChange(''); }}
-                className="ml-auto text-green-500 hover:text-green-700"
-              >
-                <X className="h-4 w-4" />
-              </button>
+          ) : status === 'processing' ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                <span>Uploaded to YouTube ✓</span>
+                <button type="button" onClick={() => { setStatus('idle'); onChange(''); }} className="ml-auto text-green-500 hover:text-green-700">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                YouTube is processing — video may take 5–30 min to become playable. Publish now; it'll appear once ready.
+              </p>
             </div>
           ) : status === 'uploading' ? (
             <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
@@ -382,16 +480,20 @@ export default function UploadClass() {
                   title={form.title}
                 />
 
-                {/* PDF link */}
+                {/* PDF sourcesheet */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">PDF Sourcesheet URL</label>
-                  <input
-                    type="url"
-                    value={form.pdfUrl}
-                    onChange={(e) => handleChange('pdfUrl', e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">PDF Sourcesheet</label>
+                  {form.pdfUrl ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                      <a href={form.pdfUrl} target="_blank" rel="noreferrer" className="truncate hover:underline">View PDF</a>
+                      <button type="button" onClick={() => handleChange('pdfUrl', '')} className="ml-auto text-green-500 hover:text-green-700">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <PdfDropzone onUploaded={(url) => handleChange('pdfUrl', url)} />
+                  )}
                 </div>
 
                 {/* Thumbnail URL */}
