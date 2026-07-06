@@ -128,30 +128,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        try {
-          const u = await fetchOrCreateUserDoc(fbUser);
-          setUser(u);
-        } catch (e) {
-          console.error('Failed to fetch user doc', e);
-          // Fall back to minimal user from Firebase Auth so the session is not lost
-          const email = (fbUser.email || '').toLowerCase();
-          setUser({
-            uid: fbUser.uid,
-            email: fbUser.email,
-            displayName: fbUser.displayName,
-            photoURL: fbUser.photoURL,
-            role: ADMIN_EMAILS.includes(email) ? 'admin' : 'student',
-            createdAt: new Date(),
-            lastLoginAt: new Date(),
-            streak: 0,
-            totalLessonsCompleted: 0,
-            bookmarks: [],
-          });
-        }
+        // Set a minimal user immediately from Auth data so the UI unblocks right away.
+        // Firestore data (streak, bookmarks, etc.) loads in the background.
+        const emailLower = (fbUser.email || '').toLowerCase();
+        const immediateUser: User = {
+          uid: fbUser.uid,
+          email: fbUser.email,
+          displayName: fbUser.displayName,
+          photoURL: fbUser.photoURL,
+          role: ADMIN_EMAILS.includes(emailLower) ? 'admin' : 'student',
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+          streak: 0,
+          totalLessonsCompleted: 0,
+          bookmarks: [],
+        };
+        setUser(immediateUser);
+        setLoading(false);
+
+        // Then enrich with Firestore data in the background
+        fetchOrCreateUserDoc(fbUser).then(setUser).catch((e) => {
+          console.error('Failed to sync user doc with Firestore', e);
+          // Keep the immediate user — already set above
+        });
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
     return unsub;
   }, []);
