@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { authorizeYouTube, uploadVideoToYouTube } from '@/lib/youtube';
+import { authorizeYouTube, uploadVideoToYouTube, getCachedYouTubeToken, clearYouTubeToken } from '@/lib/youtube';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLesson, useAllLessons, useDeleteLesson, useUpdateLesson } from '@/hooks/useLessons';
 import Layout from '@/components/layout/Layout';
@@ -127,7 +127,7 @@ function VideoUploadSection({
   title: string;
 }) {
   const [tab, setTab] = useState<'url' | 'upload'>('url');
-  const [ytToken, setYtToken] = useState<string | null>(null);
+  const [ytToken, setYtToken] = useState<string | null>(() => getCachedYouTubeToken());
   const [status, setStatus] = useState<VideoUploadStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
@@ -164,8 +164,10 @@ function VideoUploadSection({
         setStatus('processing');
         toast.success('Uploaded to YouTube! Processing — give it 5–30 min before the video plays.');
       } catch (e: unknown) {
+        const msg = (e as Error).message || '';
+        if (msg.includes('401')) { clearYouTubeToken(); setYtToken(null); }
         setStatus('error');
-        setErrorMsg((e as Error).message);
+        setErrorMsg(msg);
         toast.error('Upload failed. Try again.');
       }
     },
