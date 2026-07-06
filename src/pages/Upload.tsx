@@ -10,7 +10,7 @@ import {
   Loader2,
   Clock,
 } from 'lucide-react';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { authorizeYouTube, uploadVideoToYouTube, getCachedYouTubeToken, clearYouTubeToken } from '@/lib/youtube';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +27,6 @@ type UploadStatus = 'idle' | 'uploading' | 'done' | 'error';
 
 function PdfDropzone({ onUploaded }: { onUploaded: (url: string) => void }) {
   const [status, setStatus] = useState<UploadStatus>('idle');
-  const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -36,31 +35,25 @@ function PdfDropzone({ onUploaded }: { onUploaded: (url: string) => void }) {
     if (!file) return;
     setFileName(file.name);
     setStatus('uploading');
-    setProgress(0);
     setErrorMsg('');
 
-    const path = `pdfs/${Date.now()}_${file.name}`;
-    const ref = storageRef(storage, path);
-    const task = uploadBytesResumable(ref, file);
-
-    task.on(
-      'state_changed',
-      (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-      (err) => {
-        setStatus('error');
-        const msg = (err as { code?: string }).code === 'storage/unauthorized'
-          ? 'Storage not enabled. Go to Firebase Console → Storage → Get started.'
-          : err.message;
-        setErrorMsg(msg);
-        toast.error('PDF upload failed');
-      },
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        onUploaded(url);
-        setStatus('done');
-        toast.success('PDF uploaded!');
-      }
-    );
+    try {
+      const path = `pdfs/${Date.now()}_${file.name}`;
+      const ref = storageRef(storage, path);
+      const snap = await uploadBytes(ref, file);
+      const url = await getDownloadURL(snap.ref);
+      onUploaded(url);
+      setStatus('done');
+      toast.success('PDF uploaded!');
+    } catch (err: unknown) {
+      setStatus('error');
+      const code = (err as { code?: string }).code;
+      const msg = code === 'storage/unauthorized'
+        ? 'Storage not enabled. Go to Firebase Console → Storage → Get started.'
+        : (err as Error).message;
+      setErrorMsg(msg);
+      toast.error('PDF upload failed');
+    }
   }, [onUploaded]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -84,14 +77,9 @@ function PdfDropzone({ onUploaded }: { onUploaded: (url: string) => void }) {
 
   if (status === 'uploading') {
     return (
-      <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
-        <div className="flex items-center gap-2 text-sm text-blue-700 mb-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Uploading {fileName}… {progress}%
-        </div>
-        <div className="h-2 bg-blue-200 rounded-full overflow-hidden">
-          <div className="h-2 bg-blue-600 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-        </div>
+      <div className="flex items-center gap-2 p-3 border border-blue-200 rounded-xl bg-blue-50 text-sm text-blue-700">
+        <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+        Uploading {fileName}…
       </div>
     );
   }

@@ -41,7 +41,6 @@ export async function authorizeYouTube(): Promise<string> {
 
   const provider = new GoogleAuthProvider();
   provider.addScope(YT_UPLOAD_SCOPE);
-  provider.setCustomParameters({ prompt: 'consent' });
   const result = await signInWithPopup(auth, provider);
   const cred = GoogleAuthProvider.credentialFromResult(result);
   if (!cred?.accessToken) throw new Error('No YouTube access token received');
