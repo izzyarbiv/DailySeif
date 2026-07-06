@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import ReactPlayer from 'react-player';
+import YouTubePlayer from '@/components/ui/YouTubePlayer';
 import {
   ArrowLeft,
   ChevronRight,
@@ -43,35 +43,21 @@ export default function LessonViewer() {
   const [notesTouched, setNotesTouched] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
-  const [playerReady, setPlayerReady] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
-  const playerRef = useRef<HTMLVideoElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const isBookmarked = user?.bookmarks?.includes(id || '') ?? false;
   const isCompleted = progress?.completed ?? false;
   const notes = notesTouched ? notesDraft : (progress?.notes ?? '');
 
-  // Load saved position
   useEffect(() => {
-    if (playerReady && progress?.watchedSeconds && progress.watchedSeconds > 10) {
-      if (playerRef.current) {
-        playerRef.current.currentTime = progress.watchedSeconds;
-      }
-    }
-  }, [playerReady, progress?.watchedSeconds]);
-
-  useEffect(() => {
-    return () => {
-      clearTimeout(saveTimer.current);
-    };
+    return () => { clearTimeout(saveTimer.current); };
   }, []);
 
-  // Save position via timeupdate
-  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+  // Called by YouTubePlayer every second while playing
+  const handleTimeUpdate = (currentTime: number) => {
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      const currentTime = (e.target as HTMLVideoElement).currentTime ?? 0;
       if (user?.uid && id && currentTime > 0) {
         saveProgress.mutate({ userId: user.uid, lessonId: id, watchedSeconds: Math.floor(currentTime) });
       }
@@ -152,17 +138,11 @@ export default function LessonViewer() {
             {/* Video Player */}
             {lesson.videoUrl ? (
               <div className="bg-black rounded-2xl overflow-hidden shadow-lg">
-                <div className="relative aspect-video">
-                  <ReactPlayer
-                    ref={playerRef}
-                    src={lesson.videoUrl}
-                    width="100%"
-                    height="100%"
-                    controls
-                    onCanPlay={() => setPlayerReady(true)}
-                    onTimeUpdate={handleTimeUpdate}
-                  />
-                </div>
+                <YouTubePlayer
+                  url={lesson.videoUrl}
+                  initialTime={progress?.watchedSeconds}
+                  onTimeUpdate={handleTimeUpdate}
+                />
               </div>
             ) : (
               <div className="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-2xl h-48 flex items-center justify-center">

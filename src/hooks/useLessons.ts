@@ -97,8 +97,8 @@ export function useLesson(id: string | undefined) {
     queryFn: async () => {
       const snap = await getDoc(doc(db, 'lessons', id!));
       if (!snap.exists()) throw new Error('Lesson not found');
-      // Increment view count
-      await updateDoc(doc(db, 'lessons', id!), { viewCount: increment(1) });
+      // Best-effort view count — non-admins can't write, so swallow the error
+      updateDoc(doc(db, 'lessons', id!), { viewCount: increment(1) }).catch(() => {});
       return fromFirestore(snap.data() as Record<string, unknown>, snap.id);
     },
     staleTime: 1000 * 60 * 2,
