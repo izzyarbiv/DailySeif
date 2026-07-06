@@ -144,12 +144,29 @@ export default function LessonViewer() {
                   onTimeUpdate={handleTimeUpdate}
                 />
               </div>
-            ) : (
+            ) : lesson.spotifyUrl ? null : (
               <div className="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-2xl h-48 flex items-center justify-center">
                 <div className="text-center text-white">
                   <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p className="text-sm opacity-70">No video for this lesson</p>
                 </div>
+              </div>
+            )}
+
+            {/* Spotify player */}
+            {lesson.spotifyUrl && (
+              <div className="rounded-2xl overflow-hidden shadow-lg">
+                <iframe
+                  src={lesson.spotifyUrl
+                    .replace('open.spotify.com/', 'open.spotify.com/embed/')
+                    .replace('/embed/embed/', '/embed/')}
+                  width="100%"
+                  height="152"
+                  style={{ border: 'none' }}
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                  title="Spotify player"
+                />
               </div>
             )}
 

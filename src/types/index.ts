@@ -20,6 +20,7 @@ export interface Lesson {
   series?: string;
   instructor: string;
   videoUrl?: string;
+  spotifyUrl?: string;
   pdfUrl?: string;
   thumbnailUrl?: string;
   duration?: number; // in minutes
