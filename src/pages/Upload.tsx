@@ -325,10 +325,12 @@ export default function UploadClass() {
       });
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code || '';
-      if (code.includes('permission-denied')) {
-        toast.error('Permission denied. Sign out/in after setting your account as admin.');
+      const msg = (err as { message?: string })?.message || '';
+      console.error('Lesson create error:', code, msg, err);
+      if (code === 'permission-denied' || code.includes('permission-denied')) {
+        toast.error('Permission denied — Firestore rules are blocking the write. Update rules in Firebase Console.', { duration: 8000 });
       } else {
-        toast.error('Upload failed. Please try again.');
+        toast.error(`Failed: ${code || msg || 'unknown error'}`, { duration: 8000 });
       }
     }
   };
