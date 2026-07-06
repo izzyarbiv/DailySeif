@@ -17,6 +17,10 @@ import {
 import { db } from '@/lib/firebase';
 import type { Lesson, LessonCategory } from '@/types';
 
+function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+}
+
 function fromFirestore(data: Record<string, unknown>, id: string): Lesson {
   return {
     id,
@@ -107,7 +111,7 @@ export function useCreateLesson() {
   return useMutation({
     mutationFn: async (data: Omit<Lesson, 'id' | 'createdAt' | 'updatedAt' | 'viewCount' | 'completionCount'>) => {
       const ref = await addDoc(collection(db, 'lessons'), {
-        ...data,
+        ...stripUndefined(data as unknown as Record<string, unknown>),
         viewCount: 0,
         completionCount: 0,
         publishedAt: data.isPublished ? serverTimestamp() : null,
@@ -126,7 +130,7 @@ export function useUpdateLesson() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Lesson> }) => {
       await updateDoc(doc(db, 'lessons', id), {
-        ...data,
+        ...stripUndefined(data as unknown as Record<string, unknown>),
         updatedAt: serverTimestamp(),
       });
     },
