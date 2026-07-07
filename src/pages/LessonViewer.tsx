@@ -44,6 +44,7 @@ export default function LessonViewer() {
   const [showNotes, setShowNotes] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
+  const [mediaTab, setMediaTab] = useState<'video' | 'audio'>('video');
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const isBookmarked = user?.bookmarks?.includes(id || '') ?? false;
@@ -136,7 +137,25 @@ export default function LessonViewer() {
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
             {/* Video Player */}
-            {lesson.videoUrl ? (
+            {/* Media tab toggle */}
+            {lesson.videoUrl && lesson.spotifyUrl && (
+              <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+                {(['video', 'audio'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setMediaTab(t)}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                      mediaTab === t ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {t === 'video' ? '🎬 Video' : '🎵 Audio'}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Video player */}
+            {lesson.videoUrl && (!lesson.spotifyUrl || mediaTab === 'video') && (
               <div className="bg-black rounded-2xl overflow-hidden shadow-lg">
                 <YouTubePlayer
                   url={lesson.videoUrl}
@@ -144,17 +163,10 @@ export default function LessonViewer() {
                   onTimeUpdate={handleTimeUpdate}
                 />
               </div>
-            ) : lesson.spotifyUrl ? null : (
-              <div className="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-2xl h-48 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm opacity-70">No video for this lesson</p>
-                </div>
-              </div>
             )}
 
             {/* Spotify player */}
-            {lesson.spotifyUrl && (
+            {lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && (
               <div className="rounded-2xl overflow-hidden shadow-lg">
                 <iframe
                   src={lesson.spotifyUrl
@@ -167,6 +179,16 @@ export default function LessonViewer() {
                   loading="lazy"
                   title="Spotify player"
                 />
+              </div>
+            )}
+
+            {/* No media */}
+            {!lesson.videoUrl && !lesson.spotifyUrl && (
+              <div className="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-2xl h-48 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm opacity-70">No video for this lesson</p>
+                </div>
               </div>
             )}
 

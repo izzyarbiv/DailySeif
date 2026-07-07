@@ -1,0 +1,57 @@
+import { useEffect } from 'react';
+import { collection, getDocs, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+
+export function useSpotifySync() {
+  const { isAdmin } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    async function sync() {
+      try {
+        const res = await fetch('/api/spotify-episodes');
+        if (!res.ok) return;
+        const { episodes } = await res.json() as { episodes: { id: string; name: string; description: string; url: string; durationMs: number; releaseDate: string }[] };
+        if (!episodes?.length) return;
+
+        // Get all existing spotifyUrls to avoid duplicates
+        const snap = await getDocs(query(collection(db, 'lessons'), where('spotifyUrl', '!=', null)));
+        const existingUrls = new Set(snap.docs.map(d => d.data().spotifyUrl as string));
+
+        let added = 0;
+        for (const ep of episodes) {
+          if (existingUrls.has(ep.url)) continue;
+          await addDoc(collection(db, 'lessons'), {
+            title: ep.name,
+            description: ep.description,
+            spotifyUrl: ep.url,
+            category: 'other',
+            instructor: "R' Saks",
+            tags: [],
+            isPublished: true,
+            duration: ep.durationMs ? Math.round(ep.durationMs / 60000) : undefined,
+            publishedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            viewCount: 0,
+            completionCount: 0,
+          });
+          added++;
+        }
+
+        if (added > 0) {
+          qc.invalidateQueries({ queryKey: ['lessons'] });
+          console.log(`[Spotify sync] Added ${added} new episode(s)`);
+        }
+      } catch (e) {
+        console.error('[Spotify sync] failed:', e);
+      }
+    }
+
+    sync();
+  }, [isAdmin, qc]);
+}
