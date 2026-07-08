@@ -21,12 +21,12 @@ export default async function handler(req, res) {
     });
 
     const tokenText = await tokenRes.text();
-    let tokenData;
-    try { tokenData = JSON.parse(tokenText); } catch {
-      return res.status(502).json({ error: `Spotify auth returned: ${tokenText.slice(0, 200)}`, episodes: [] });
+    if (!tokenText.startsWith('{')) {
+      return res.status(502).json({ error: `Spotify auth status=${tokenRes.status} body=${tokenText.slice(0, 300)}`, episodes: [] });
     }
+    const tokenData = JSON.parse(tokenText);
     const { access_token, error: tokenErr } = tokenData;
-    if (!access_token) return res.status(401).json({ error: tokenErr, episodes: [] });
+    if (!access_token) return res.status(401).json({ error: tokenErr, details: tokenData, episodes: [] });
 
     // Fetch latest episodes
     const epRes = await fetch(
