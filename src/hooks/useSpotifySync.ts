@@ -31,7 +31,7 @@ export function useSpotifySync() {
             title: ep.name,
             description: ep.description,
             spotifyUrl: ep.url,
-            category: 'other',
+            category: 'shulchan-aruch',
             instructor: "R' Saks",
             tags: [],
             isPublished: true,
