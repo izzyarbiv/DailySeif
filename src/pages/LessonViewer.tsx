@@ -15,9 +15,10 @@ import {
   Download,
   ExternalLink,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLesson, useLessons } from '@/hooks/useLessons';
+import { useLesson, useLessons, useDeleteLesson } from '@/hooks/useLessons';
 import { useProgress, useSaveProgress, useToggleBookmark } from '@/hooks/useProgress';
 import Layout from '@/components/layout/Layout';
 import Button from '@/components/ui/Button';
@@ -38,6 +39,7 @@ export default function LessonViewer() {
 
   const saveProgress = useSaveProgress();
   const toggleBookmark = useToggleBookmark();
+  const deleteLesson = useDeleteLesson();
 
   const [notesDraft, setNotesDraft] = useState('');
   const [notesTouched, setNotesTouched] = useState(false);
@@ -79,6 +81,14 @@ export default function LessonViewer() {
       bookmarks: user.bookmarks || [],
     });
     toast.success(newBookmarks.includes(id) ? '📌 Bookmarked!' : 'Bookmark removed');
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!confirm('Remove this class permanently? Students will no longer see it.')) return;
+    await deleteLesson.mutateAsync(id);
+    toast.success('Class removed');
+    navigate('/dashboard');
   };
 
   const handleSaveNotes = async () => {
@@ -236,6 +246,16 @@ export default function LessonViewer() {
                       <Bookmark className="h-5 w-5" />
                     )}
                   </button>
+                  {user?.role === 'admin' && (
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleteLesson.isPending}
+                      className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 disabled:opacity-50"
+                      title="Remove class"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  )}
                 </div>
               </div>
 

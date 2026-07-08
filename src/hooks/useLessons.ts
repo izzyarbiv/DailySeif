@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -86,7 +87,9 @@ export function useAllLessons() {
     queryFn: async () => {
       const q = query(collection(db, 'lessons'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
-      return snap.docs.map((d) => fromFirestore(d.data() as Record<string, unknown>, d.id));
+      return snap.docs
+        .filter((d) => !d.data().removed)
+        .map((d) => fromFirestore(d.data() as Record<string, unknown>, d.id));
     },
   });
 }
@@ -144,11 +147,26 @@ export function useUpdateLesson() {
 }
 
 // Delete lesson
+// Auto-synced Spotify lessons are replaced with a hidden tombstone
+// ({spotifyUrl, removed}) instead of deleted outright — otherwise the
+// Spotify sync would re-import the episode on the next admin visit.
 export function useDeleteLesson() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await deleteDoc(doc(db, 'lessons', id));
+      const ref = doc(db, 'lessons', id);
+      const snap = await getDoc(ref);
+      const spotifyUrl = snap.exists() ? (snap.data().spotifyUrl as string | undefined) : undefined;
+      if (spotifyUrl) {
+        await setDoc(ref, {
+          spotifyUrl,
+          removed: true,
+          isPublished: false,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await deleteDoc(ref);
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['lessons'] }),
   });
