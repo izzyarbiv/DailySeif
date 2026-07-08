@@ -137,8 +137,8 @@ export default function LessonViewer() {
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
             {/* Video Player */}
-            {/* Media tab toggle */}
-            {lesson.videoUrl && lesson.spotifyUrl && (
+            {/* Media tab toggle — shown when more than one media type exists */}
+            {lesson.videoUrl && (lesson.spotifyUrl || lesson.audioUrl) && (
               <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
                 {(['video', 'audio'] as const).map((t) => (
                   <button
@@ -155,7 +155,7 @@ export default function LessonViewer() {
             )}
 
             {/* Video player */}
-            {lesson.videoUrl && (!lesson.spotifyUrl || mediaTab === 'video') && (
+            {lesson.videoUrl && (!(lesson.spotifyUrl || lesson.audioUrl) || mediaTab === 'video') && (
               <div className="bg-black rounded-2xl overflow-hidden shadow-lg">
                 <YouTubePlayer
                   url={lesson.videoUrl}
@@ -165,7 +165,7 @@ export default function LessonViewer() {
               </div>
             )}
 
-            {/* Spotify player */}
+            {/* Spotify embed player */}
             {lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && (
               <div className="rounded-2xl overflow-hidden shadow-lg">
                 <iframe
@@ -179,6 +179,21 @@ export default function LessonViewer() {
                   loading="lazy"
                   title="Spotify player"
                 />
+              </div>
+            )}
+
+            {/* Direct audio player (from RSS auto-sync) */}
+            {lesson.audioUrl && !lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+                <audio
+                  controls
+                  src={lesson.audioUrl}
+                  className="w-full"
+                  style={{ colorScheme: 'light' }}
+                  preload="metadata"
+                >
+                  Your browser does not support audio playback.
+                </audio>
               </div>
             )}
 

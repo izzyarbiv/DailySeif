@@ -39,29 +39,17 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: `token parse: ${e.message}`, raw: tokenText.slice(0, 200), episodes: [] });
   }
 
-  // Step 3: fetch episodes
-  let epText;
+  // Step 3: get show info (may reveal RSS feed)
+  let showText;
   try {
-    const epRes = await fetch(
-      `https://api.spotify.com/v1/shows/${SHOW_ID}/episodes?limit=20&market=US`,
+    const showRes = await fetch(
+      `https://api.spotify.com/v1/shows/${SHOW_ID}`,
       { headers: { Authorization: `Bearer ${access_token}` } }
     );
-    epText = await epRes.text();
-    const data = JSON.parse(epText);
-    if (!epRes.ok) return res.status(epRes.status).json({ error: data.error, episodes: [] });
-
-    const episodes = (data.items ?? []).map((ep) => ({
-      id: ep.id,
-      name: ep.name,
-      description: (ep.description ?? '').slice(0, 500),
-      url: `https://open.spotify.com/episode/${ep.id}`,
-      durationMs: ep.duration_ms,
-      releaseDate: ep.release_date,
-    }));
-
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
-    return res.json({ episodes });
+    showText = await showRes.text();
+    const showData = JSON.parse(showText);
+    return res.json({ show: showData, episodes: [] });
   } catch (e) {
-    return res.status(500).json({ step: 'episodes', error: e.message, raw: (epText || '').slice(0, 200), episodes: [] });
+    return res.status(500).json({ step: 'show', error: e.message, raw: (showText || '').slice(0, 300), episodes: [] });
   }
 }

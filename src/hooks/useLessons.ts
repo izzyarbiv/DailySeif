@@ -32,6 +32,7 @@ function fromFirestore(data: Record<string, unknown>, id: string): Lesson {
     instructor: (data.instructor as string) || '',
     videoUrl: data.videoUrl as string | undefined,
     spotifyUrl: data.spotifyUrl as string | undefined,
+    audioUrl: data.audioUrl as string | undefined,
     pdfUrl: data.pdfUrl as string | undefined,
     thumbnailUrl: data.thumbnailUrl as string | undefined,
     duration: data.duration as number | undefined,

@@ -21,6 +21,7 @@ export interface Lesson {
   instructor: string;
   videoUrl?: string;
   spotifyUrl?: string;
+  audioUrl?: string;
   pdfUrl?: string;
   thumbnailUrl?: string;
   duration?: number; // in minutes
