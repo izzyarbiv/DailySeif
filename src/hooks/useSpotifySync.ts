@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { collection, getDocs, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,7 +21,8 @@ export function useSpotifySync() {
         if (!episodes?.length) return;
 
         // Get all existing spotifyUrls to avoid duplicates
-        const snap = await getDocs(query(collection(db, 'lessons'), where('spotifyUrl', '!=', null)));
+        // (orderBy only returns docs where the field exists; `!=` null is not a valid Firestore query)
+        const snap = await getDocs(query(collection(db, 'lessons'), orderBy('spotifyUrl')));
         const existingUrls = new Set(snap.docs.map(d => d.data().spotifyUrl as string));
 
         let added = 0;
