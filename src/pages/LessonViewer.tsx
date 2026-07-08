@@ -173,7 +173,7 @@ export default function LessonViewer() {
                     .replace('open.spotify.com/', 'open.spotify.com/embed/')
                     .replace('/embed/embed/', '/embed/')}
                   width="100%"
-                  height="152"
+                  height="352"
                   style={{ border: 'none' }}
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   loading="lazy"

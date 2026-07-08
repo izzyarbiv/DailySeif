@@ -13,44 +13,45 @@ export function useSpotifySync() {
 
     async function sync() {
       try {
-        const res = await fetch('/api/podcast-episodes');
+        const res = await fetch('/api/spotify-episodes');
         if (!res.ok) return;
         const { episodes } = await res.json() as {
-          episodes: { id: string; name: string; description: string; audioUrl: string; durationMs: number; releaseDate: string }[]
+          episodes: { id: string; name: string; description: string; url: string; durationMs: number; releaseDate: string }[]
         };
         if (!episodes?.length) return;
 
-        // Get all existing audioUrls to avoid duplicates
-        const snap = await getDocs(query(collection(db, 'lessons'), where('audioUrl', '!=', null)));
-        const existingUrls = new Set(snap.docs.map(d => d.data().audioUrl as string));
+        // Get all existing spotifyUrls to avoid duplicates
+        const snap = await getDocs(query(collection(db, 'lessons'), where('spotifyUrl', '!=', null)));
+        const existingUrls = new Set(snap.docs.map(d => d.data().spotifyUrl as string));
 
         let added = 0;
         for (const ep of episodes) {
-          if (existingUrls.has(ep.audioUrl)) continue;
-          await addDoc(collection(db, 'lessons'), {
+          if (existingUrls.has(ep.url)) continue;
+          const doc: Record<string, unknown> = {
             title: ep.name,
             description: ep.description,
-            audioUrl: ep.audioUrl,
+            spotifyUrl: ep.url,
             category: 'other',
             instructor: "R' Saks",
             tags: [],
             isPublished: true,
-            duration: ep.durationMs ? Math.round(ep.durationMs / 60000) : undefined,
             publishedAt: serverTimestamp(),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             viewCount: 0,
             completionCount: 0,
-          });
+          };
+          if (ep.durationMs) doc.duration = Math.round(ep.durationMs / 60000);
+          await addDoc(collection(db, 'lessons'), doc);
           added++;
         }
 
         if (added > 0) {
           qc.invalidateQueries({ queryKey: ['lessons'] });
-          console.log(`[Podcast sync] Added ${added} new episode(s)`);
+          console.log(`[Spotify sync] Added ${added} new episode(s)`);
         }
       } catch (e) {
-        console.error('[Podcast sync] failed:', e);
+        console.error('[Spotify sync] failed:', e);
       }
     }
 
