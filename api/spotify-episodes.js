@@ -1,15 +1,47 @@
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
-async function fetchWithRetry(url, options, tries = 3) {
-  let lastRes;
-  for (let i = 0; i < tries; i++) {
-    lastRes = await fetch(url, options);
-    if (lastRes.status !== 429) return lastRes;
-    const wait = Number(lastRes.headers.get('retry-after')) || 2 ** i;
-    await new Promise((r) => setTimeout(r, Math.min(wait, 5) * 1000));
+// Persisted query used by Spotify's own web player for episode listings.
+// Overridable via env in case Spotify rotates it.
+const EPISODES_QUERY_HASH =
+  process.env.SPOTIFY_EPISODES_QUERY_HASH ||
+  '06046f9b939d56c8eb7cdbb687da938de1164c006871aec91dc26e4dc7d8eb08';
+
+async function getAnonymousToken(showId) {
+  const res = await fetch(`https://open.spotify.com/embed/show/${showId}`, {
+    headers: { 'User-Agent': UA, 'Accept-Language': 'en' },
+  });
+  if (!res.ok) throw new Error(`Embed page fetch failed: ${res.status}`);
+  const html = await res.text();
+  const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+  if (!m) throw new Error('No embed data found');
+  const token = JSON.parse(m[1])?.props?.pageProps?.state?.settings?.session?.accessToken;
+  if (!token) throw new Error('No access token in embed page');
+  return token;
+}
+
+async function fetchEpisodesPage(token, showId, offset, limit) {
+  const variables = encodeURIComponent(
+    JSON.stringify({ uri: `spotify:show:${showId}`, offset, limit })
+  );
+  const extensions = encodeURIComponent(
+    JSON.stringify({ persistedQuery: { version: 1, sha256Hash: EPISODES_QUERY_HASH } })
+  );
+  const res = await fetch(
+    `https://api-partner.spotify.com/pathfinder/v1/query?operationName=queryPodcastEpisodes&variables=${variables}&extensions=${extensions}`,
+    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'User-Agent': UA } }
+  );
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Episodes fetch not JSON (${res.status}): ${text.slice(0, 120)}`);
   }
-  return lastRes;
+  if (data.errors?.length) throw new Error(`GraphQL error: ${data.errors[0].message}`);
+  const eps = data?.data?.podcastUnionV2?.episodesV2;
+  if (!eps) throw new Error('Unexpected episodes response shape');
+  return eps;
 }
 
 export default async function handler(req, res) {
@@ -21,47 +53,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    // The public embed page contains an anonymous access token —
-    // works for public shows without app credentials or Premium
-    const embedRes = await fetchWithRetry(`https://open.spotify.com/embed/show/${SHOW_ID}`, {
-      headers: { 'User-Agent': UA, 'Accept-Language': 'en' },
-    });
-    if (!embedRes.ok) {
-      return res.status(502).json({ error: `Embed page fetch failed: ${embedRes.status}`, episodes: [] });
-    }
-    const html = await embedRes.text();
-    const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-    if (!m) return res.status(502).json({ error: 'No embed data found', episodes: [] });
+    const token = await getAnonymousToken(SHOW_ID);
 
-    let token;
-    try {
-      token = JSON.parse(m[1])?.props?.pageProps?.state?.settings?.session?.accessToken;
-    } catch {
-      return res.status(502).json({ error: 'Embed data parse failed', episodes: [] });
+    const PAGE = 50;
+    const items = [];
+    let total = Infinity;
+    for (let offset = 0; offset < total && offset < 400; offset += PAGE) {
+      const page = await fetchEpisodesPage(token, SHOW_ID, offset, PAGE);
+      total = page.totalCount ?? 0;
+      items.push(...(page.items ?? []));
+      if (!page.items?.length) break;
     }
-    if (!token) return res.status(502).json({ error: 'No access token in embed page', episodes: [] });
 
-    const epRes = await fetchWithRetry(
-      `https://api.spotify.com/v1/shows/${SHOW_ID}/episodes?limit=50`,
-      { headers: { Authorization: `Bearer ${token}`, 'User-Agent': UA } }
-    );
-    const epText = await epRes.text();
-    let data;
-    try {
-      data = JSON.parse(epText);
-    } catch {
-      return res.status(502).json({ error: `Episodes fetch not JSON (${epRes.status}): ${epText.slice(0, 120)}`, episodes: [] });
-    }
-    if (!epRes.ok) return res.status(epRes.status).json({ error: data.error, episodes: [] });
-
-    const episodes = (data.items ?? []).filter(Boolean).map((ep) => ({
-      id: ep.id,
-      name: ep.name,
-      description: (ep.description ?? '').slice(0, 500),
-      url: `https://open.spotify.com/episode/${ep.id}`,
-      durationMs: ep.duration_ms,
-      releaseDate: ep.release_date,
-    }));
+    const episodes = items
+      .map((it) => it?.entity?.data)
+      .filter((d) => d && d.id && d.name)
+      .map((d) => ({
+        id: d.id,
+        name: d.name,
+        description: (d.description ?? '').slice(0, 500),
+        url: `https://open.spotify.com/episode/${d.id}`,
+        durationMs: d.duration?.totalMilliseconds ?? 0,
+        releaseDate: (d.releaseDate?.isoString ?? '').slice(0, 10),
+        thumbnailUrl:
+          d.coverArt?.sources?.find((s) => s.width === 300)?.url ??
+          d.coverArt?.sources?.[0]?.url ??
+          null,
+      }));
 
     // Only cache successful responses
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');

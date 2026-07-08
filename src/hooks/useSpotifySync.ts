@@ -16,7 +16,7 @@ export function useSpotifySync() {
         const res = await fetch('/api/spotify-episodes');
         if (!res.ok) return;
         const { episodes } = await res.json() as {
-          episodes: { id: string; name: string; description: string; url: string; durationMs: number; releaseDate: string }[]
+          episodes: { id: string; name: string; description: string; url: string; durationMs: number; releaseDate: string; thumbnailUrl?: string | null }[]
         };
         if (!episodes?.length) return;
 
@@ -42,6 +42,7 @@ export function useSpotifySync() {
             completionCount: 0,
           };
           if (ep.durationMs) doc.duration = Math.round(ep.durationMs / 60000);
+          if (ep.thumbnailUrl) doc.thumbnailUrl = ep.thumbnailUrl;
           await addDoc(collection(db, 'lessons'), doc);
           added++;
         }
