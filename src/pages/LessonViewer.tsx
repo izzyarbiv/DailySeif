@@ -34,7 +34,7 @@ export default function LessonViewer() {
   const { user } = useAuth();
 
   const { data: lesson, isLoading, error } = useLesson(id);
-  const { data: progress } = useProgress(user?.uid, id);
+  const { data: progress, isFetched: progressFetched } = useProgress(user?.uid, id);
   const { data: allLessons = [] } = useLessons(lesson?.category);
 
   const saveProgress = useSaveProgress();
@@ -47,25 +47,65 @@ export default function LessonViewer() {
   const [showPdf, setShowPdf] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [mediaTab, setMediaTab] = useState<'video' | 'audio'>('video');
-  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Resume point for the Spotify embed — locked in once progress has loaded
+  // so the iframe src doesn't change (and reload) mid-playback
+  const [spotifySeek, setSpotifySeek] = useState<number | null>(null);
+  const latestTimeRef = useRef(0);
+  const lastSaveRef = useRef(0);
 
   const isBookmarked = user?.bookmarks?.includes(id || '') ?? false;
   const isCompleted = progress?.completed ?? false;
   const notes = notesTouched ? notesDraft : (progress?.notes ?? '');
 
-  useEffect(() => {
-    return () => { clearTimeout(saveTimer.current); };
-  }, []);
-
-  // Called by YouTubePlayer every second while playing
+  // Called every second while playing (YouTube tick or Spotify postMessage).
+  // Throttled: saves at most once per 15s while playback is running.
   const handleTimeUpdate = (currentTime: number) => {
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
+    latestTimeRef.current = currentTime;
+    const now = Date.now();
+    if (now - lastSaveRef.current >= 15000) {
+      lastSaveRef.current = now;
       if (user?.uid && id && currentTime > 0) {
         saveProgress.mutate({ userId: user.uid, lessonId: id, watchedSeconds: Math.floor(currentTime) });
       }
-    }, 15000);
+    }
   };
+  const handleTimeUpdateRef = useRef(handleTimeUpdate);
+  handleTimeUpdateRef.current = handleTimeUpdate;
+
+  // The Spotify embed posts playback_update messages to the parent page
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== 'https://open.spotify.com') return;
+      const data = e.data as { type?: string; payload?: { position?: number; isPaused?: boolean } };
+      if (data?.type === 'playback_update' && typeof data.payload?.position === 'number' && !data.payload.isPaused) {
+        handleTimeUpdateRef.current(data.payload.position / 1000);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
+  // Save the final position when leaving the lesson
+  useEffect(() => {
+    latestTimeRef.current = 0;
+    lastSaveRef.current = 0;
+    return () => {
+      const t = latestTimeRef.current;
+      if (user?.uid && id && t > 10) {
+        saveProgress.mutate({ userId: user.uid, lessonId: id, watchedSeconds: Math.floor(t) });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, user?.uid]);
+
+  // Lock in the Spotify resume point once progress has loaded (or immediately if signed out)
+  useEffect(() => {
+    if (spotifySeek === null && (progressFetched || !user?.uid)) {
+      const t = Math.floor(progress?.watchedSeconds ?? 0);
+      setSpotifySeek(t > 10 ? t : 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progressFetched, user?.uid]);
 
   const handleMarkComplete = async () => {
     if (!user?.uid || !id) return;
@@ -155,7 +195,13 @@ export default function LessonViewer() {
                 {(['video', 'audio'] as const).map((t) => (
                   <button
                     key={t}
-                    onClick={() => setMediaTab(t)}
+                    onClick={() => {
+                      if (t === mediaTab) return;
+                      // Carry the current position into the reloaded player
+                      const pos = Math.floor(latestTimeRef.current);
+                      if (pos > 10) setSpotifySeek(pos);
+                      setMediaTab(t);
+                    }}
                     className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                       mediaTab === t ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
                     }`}
@@ -166,8 +212,8 @@ export default function LessonViewer() {
               </div>
             )}
 
-            {/* Video player */}
-            {lesson.videoUrl && (!(lesson.spotifyUrl || lesson.audioUrl) || mediaTab === 'video') && (
+            {/* Video player — waits for saved progress so it can resume where you left off */}
+            {lesson.videoUrl && (!(lesson.spotifyUrl || lesson.audioUrl) || mediaTab === 'video') && (progressFetched || !user?.uid) && (
               <div className="bg-black rounded-2xl overflow-hidden shadow-lg">
                 <YouTubePlayer
                   url={lesson.videoUrl}
@@ -177,18 +223,19 @@ export default function LessonViewer() {
               </div>
             )}
 
-            {/* Spotify embed player */}
-            {lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && (() => {
+            {/* Spotify embed player — spotifySeek is the resume position */}
+            {lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && spotifySeek !== null && (() => {
               const base = lesson.spotifyUrl
                 .replace('open.spotify.com/', 'open.spotify.com/embed/')
                 .replace('/embed/embed/', '/embed/')
                 .split('?')[0];
               const showVideo = !lesson.videoUrl && mediaTab === 'video';
+              const src = `${base}${showVideo ? '/video' : ''}${spotifySeek > 0 ? `?t=${spotifySeek}` : ''}`;
               return (
                 <div className="rounded-2xl overflow-hidden shadow-lg">
                   <iframe
-                    key={showVideo ? 'video' : 'audio'}
-                    src={showVideo ? `${base}/video` : base}
+                    key={`${showVideo ? 'video' : 'audio'}-${spotifySeek}`}
+                    src={src}
                     width="100%"
                     height={showVideo ? 352 : 152}
                     style={{ border: 'none' }}

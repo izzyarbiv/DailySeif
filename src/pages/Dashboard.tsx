@@ -32,6 +32,7 @@ export default function Dashboard() {
   const { data: progressList = [] } = useUserProgress(user?.uid);
 
   const completedIds = new Set(progressList.filter((p) => p.completed).map((p) => p.lessonId));
+  const progressByLesson = new Map(progressList.map((p) => [p.lessonId, p]));
   const totalCompleted = completedIds.size;
   const totalLessons = lessons.length;
 
@@ -182,6 +183,13 @@ export default function Dashboard() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {lessons.map((lesson) => {
               const done = completedIds.has(lesson.id);
+              const prog = progressByLesson.get(lesson.id);
+              const durationSec = (lesson.duration ?? 0) * 60;
+              const watchedPct = done
+                ? 100
+                : prog && durationSec > 0
+                ? Math.min(100, Math.round((prog.watchedSeconds / durationSec) * 100))
+                : 0;
               return (
                 <Link key={lesson.id} to={`/lesson/${lesson.id}`} className="block">
                   <Card hover className="h-full group relative overflow-hidden p-0">
@@ -205,6 +213,15 @@ export default function Dashboard() {
                       {done && (
                         <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
                           <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                      )}
+                      {/* Watch progress bar */}
+                      {watchedPct > 0 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+                          <div
+                            className={`h-full ${done ? 'bg-green-500' : 'bg-blue-500'}`}
+                            style={{ width: `${watchedPct}%` }}
+                          />
                         </div>
                       )}
                     </div>
@@ -236,6 +253,10 @@ export default function Dashboard() {
                         <span className="text-xs text-gray-400">{lesson.instructor}</span>
                         {done ? (
                           <Badge variant="success">Completed</Badge>
+                        ) : watchedPct > 0 ? (
+                          <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                            Resume · {watchedPct}% <ChevronRight className="h-3 w-3" />
+                          </span>
                         ) : (
                           <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
                             Watch now <ChevronRight className="h-3 w-3" />
