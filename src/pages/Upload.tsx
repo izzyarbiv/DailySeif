@@ -15,7 +15,6 @@ import { storage } from '@/lib/firebase';
 import { authorizeYouTube, uploadVideoToYouTube, getCachedYouTubeToken, clearYouTubeToken } from '@/lib/youtube';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateLesson, useAllLessons, useDeleteLesson, useUpdateLesson } from '@/hooks/useLessons';
-import { useSpotifySync } from '@/hooks/useSpotifySync';
 import Layout from '@/components/layout/Layout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -267,7 +266,6 @@ function VideoUploadSection({
 
 export default function UploadClass() {
   const { user } = useAuth();
-  useSpotifySync();
   const createLesson = useCreateLesson();
   const deleteLesson = useDeleteLesson();
   const updateLesson = useUpdateLesson();
