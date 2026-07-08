@@ -93,14 +93,6 @@ export default function SignIn() {
           <p className="text-[#d9e6f5] text-lg leading-relaxed">
             Learn Torah daily. Quality shiurim, organized and accessible.
           </p>
-          <div className="mt-10 grid grid-cols-3 gap-4 text-center">
-            {[['100+', 'Shiurim'], ['5K+', 'Students'], ['Daily', 'Updates']].map(([num, label]) => (
-              <div key={label} className="bg-white/10 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
-                <div className="text-2xl font-bold text-white">{num}</div>
-                <div className="text-[#d9e6f5] text-sm">{label}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

@@ -2,12 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Lessons — anyone authenticated can read published lessons
-    // Only admins can write
+    // Lessons — published lessons are public (landing page shows them
+    // to signed-out visitors); signed-in users can also read drafts.
+    // Only admins can write.
     match /lessons/{lessonId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null || resource.data.isPublished == true;
       allow create, update, delete: if request.auth != null &&
-        (request.auth.token.email == 'izzy.arbiv@gmail.com' ||
+        (request.auth.token.email in ['izzy.arbiv@gmail.com', 'dailyseif613@gmail.com'] ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
