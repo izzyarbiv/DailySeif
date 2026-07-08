@@ -20,7 +20,12 @@ export default async function handler(req, res) {
       body: 'grant_type=client_credentials',
     });
 
-    const { access_token, error: tokenErr } = await tokenRes.json();
+    const tokenText = await tokenRes.text();
+    let tokenData;
+    try { tokenData = JSON.parse(tokenText); } catch {
+      return res.status(502).json({ error: `Spotify auth returned: ${tokenText.slice(0, 200)}`, episodes: [] });
+    }
+    const { access_token, error: tokenErr } = tokenData;
     if (!access_token) return res.status(401).json({ error: tokenErr, episodes: [] });
 
     // Fetch latest episodes
