@@ -137,8 +137,10 @@ export default function LessonViewer() {
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
             {/* Video Player */}
-            {/* Media tab toggle — shown when more than one media type exists */}
-            {lesson.videoUrl && (lesson.spotifyUrl || lesson.audioUrl) && (
+            {/* Media tab toggle — shown when the lesson has both video and audio forms.
+                Spotify episodes are video podcasts, so a Spotify-only lesson still
+                gets the toggle: it switches the embed between video and audio players. */}
+            {(lesson.spotifyUrl || (lesson.videoUrl && lesson.audioUrl)) && (
               <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
                 {(['video', 'audio'] as const).map((t) => (
                   <button
@@ -166,21 +168,27 @@ export default function LessonViewer() {
             )}
 
             {/* Spotify embed player */}
-            {lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && (
-              <div className="rounded-2xl overflow-hidden shadow-lg">
-                <iframe
-                  src={lesson.spotifyUrl
-                    .replace('open.spotify.com/', 'open.spotify.com/embed/')
-                    .replace('/embed/embed/', '/embed/')}
-                  width="100%"
-                  height="352"
-                  style={{ border: 'none' }}
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  title="Spotify player"
-                />
-              </div>
-            )}
+            {lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && (() => {
+              const base = lesson.spotifyUrl
+                .replace('open.spotify.com/', 'open.spotify.com/embed/')
+                .replace('/embed/embed/', '/embed/')
+                .split('?')[0];
+              const showVideo = !lesson.videoUrl && mediaTab === 'video';
+              return (
+                <div className="rounded-2xl overflow-hidden shadow-lg">
+                  <iframe
+                    key={showVideo ? 'video' : 'audio'}
+                    src={showVideo ? `${base}/video` : base}
+                    width="100%"
+                    height={showVideo ? 352 : 152}
+                    style={{ border: 'none' }}
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                    title="Spotify player"
+                  />
+                </div>
+              );
+            })()}
 
             {/* Direct audio player (from RSS auto-sync) */}
             {lesson.audioUrl && !lesson.spotifyUrl && (!lesson.videoUrl || mediaTab === 'audio') && (
