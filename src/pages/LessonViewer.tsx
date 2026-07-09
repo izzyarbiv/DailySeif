@@ -107,14 +107,22 @@ export default function LessonViewer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progressFetched, user?.uid]);
 
+  // Signed-out visitors can watch; account features prompt sign-in
+  const requireAuth = () => {
+    if (user?.uid) return true;
+    toast('Sign in to track your progress', { icon: '🔒' });
+    navigate('/signin');
+    return false;
+  };
+
   const handleMarkComplete = async () => {
-    if (!user?.uid || !id) return;
+    if (!requireAuth() || !user?.uid || !id) return;
     await saveProgress.mutateAsync({ userId: user.uid, lessonId: id, completed: !isCompleted });
     toast.success(isCompleted ? 'Marked as incomplete' : '🎉 Lesson completed!');
   };
 
   const handleBookmark = async () => {
-    if (!user?.uid || !id) return;
+    if (!requireAuth() || !user?.uid || !id) return;
     const newBookmarks = await toggleBookmark.mutateAsync({
       userId: user.uid,
       lessonId: id,
@@ -132,7 +140,7 @@ export default function LessonViewer() {
   };
 
   const handleSaveNotes = async () => {
-    if (!user?.uid || !id) return;
+    if (!requireAuth() || !user?.uid || !id) return;
     setSavingNote(true);
     await saveProgress.mutateAsync({ userId: user.uid, lessonId: id, notes });
     setNotesTouched(false);

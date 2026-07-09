@@ -27,8 +27,8 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/lesson/:id" element={<ProtectedRoute><LessonViewer /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/lesson/:id" element={<LessonViewer />} />
             <Route path="/upload" element={<ProtectedRoute requireAdmin><Upload /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
