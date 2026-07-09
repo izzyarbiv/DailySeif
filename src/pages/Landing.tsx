@@ -86,13 +86,30 @@ export default function Landing() {
 
           <div className="grid lg:grid-cols-[1.3fr_0.7fr] gap-6 items-start">
             <div className="rounded-[28px] border border-[#e1e7ef] bg-white shadow-[0_20px_60px_-30px_rgba(28,61,110,0.42)] overflow-hidden">
-              <div className="aspect-video bg-gradient-to-br from-[#17365f] via-[#1c3d6e] to-[#2a5688] flex items-center justify-center">
-                <div className="text-center text-white px-6">
-                  <div className="mx-auto mb-3 h-16 w-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
-                    <PlayCircle className="h-8 w-8 text-white" />
+              <div className="aspect-video bg-gradient-to-br from-[#17365f] via-[#1c3d6e] to-[#2a5688] relative overflow-hidden">
+                {todayLesson?.thumbnailUrl ? (
+                  <Link to={`/lesson/${todayLesson.id}`} className="absolute inset-0 group">
+                    <img
+                      src={todayLesson.thumbnailUrl}
+                      alt={todayLesson.title}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                        <PlayCircle className="h-9 w-9 text-[#1c3d6e]" />
+                      </div>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-white px-6">
+                      <div className="mx-auto mb-3 h-16 w-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
+                        <PlayCircle className="h-8 w-8 text-white" />
+                      </div>
+                      <p className="text-sm text-[#d9e6f5]">{todayLesson ? 'Open the lesson to watch' : 'No video available'}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-[#d9e6f5]">No video available</p>
-                </div>
+                )}
               </div>
 
               <div className="p-6 sm:p-8">
@@ -156,8 +173,12 @@ export default function Landing() {
                         className="block rounded-2xl bg-white border border-[#e1e7ef] p-4 hover:border-[#cfd9e6] hover:bg-[#fdfefe] transition-colors"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-[#e9f1fb] flex items-center justify-center flex-shrink-0">
-                            <PlayCircle className="h-4.5 w-4.5 text-[#1c3d6e]" />
+                          <div className="h-10 w-10 rounded-xl bg-[#e9f1fb] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {lesson.thumbnailUrl ? (
+                              <img src={lesson.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <PlayCircle className="h-4.5 w-4.5 text-[#1c3d6e]" />
+                            )}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 text-xs text-[#65758b] mb-1">
