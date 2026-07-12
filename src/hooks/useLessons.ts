@@ -22,6 +22,54 @@ function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
 }
 
+// Local cache of the published-lessons list so returning visitors see
+// classes instantly instead of a flash of empty state while Firestore loads.
+const LESSONS_CACHE_KEY = 'dailyseif_lessons_cache_v1';
+
+function reviveLesson(l: Record<string, unknown>): Lesson {
+  return {
+    ...(l as unknown as Lesson),
+    publishedAt: l.publishedAt ? new Date(l.publishedAt as string) : null,
+    scheduledFor: l.scheduledFor ? new Date(l.scheduledFor as string) : null,
+    createdAt: l.createdAt ? new Date(l.createdAt as string) : new Date(),
+    updatedAt: l.updatedAt ? new Date(l.updatedAt as string) : new Date(),
+  };
+}
+
+function readLessonsCache(): Lesson[] | undefined {
+  try {
+    const raw = localStorage.getItem(LESSONS_CACHE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as { data?: Record<string, unknown>[] };
+    if (!Array.isArray(parsed.data)) return undefined;
+    return parsed.data.map(reviveLesson);
+  } catch {
+    return undefined;
+  }
+}
+
+function writeLessonsCache(lessons: Lesson[]) {
+  try {
+    localStorage.setItem(LESSONS_CACHE_KEY, JSON.stringify({ at: Date.now(), data: lessons }));
+  } catch {
+    // storage full/unavailable — cache is best-effort
+  }
+}
+
+function filterLessons(lessons: Lesson[], category?: LessonCategory, searchTerm?: string): Lesson[] {
+  let list = category ? lessons.filter((l) => l.category === category) : lessons;
+  if (searchTerm) {
+    const lower = searchTerm.toLowerCase();
+    list = list.filter(
+      (l) =>
+        l.title.toLowerCase().includes(lower) ||
+        l.description.toLowerCase().includes(lower) ||
+        l.tags.some((t) => t.toLowerCase().includes(lower))
+    );
+  }
+  return list;
+}
+
 function fromFirestore(data: Record<string, unknown>, id: string): Lesson {
   return {
     id,
@@ -64,17 +112,16 @@ export function useLessons(category?: LessonCategory, searchTerm?: string) {
       const snap = await getDocs(q);
       const lessons = snap.docs.map((d) => fromFirestore(d.data() as Record<string, unknown>, d.id));
 
-      if (searchTerm) {
-        const lower = searchTerm.toLowerCase();
-        return lessons.filter(
-          (l) =>
-            l.title.toLowerCase().includes(lower) ||
-            l.description.toLowerCase().includes(lower) ||
-            l.tags.some((t) => t.toLowerCase().includes(lower))
-        );
-      }
+      // Keep the local cache fresh from the unfiltered query
+      if (!category && !searchTerm) writeLessonsCache(lessons);
 
-      return lessons;
+      return filterLessons(lessons, undefined, searchTerm);
+    },
+    // Paint instantly from the local cache (filtered client-side) while
+    // the real query runs in the background
+    placeholderData: () => {
+      const cached = readLessonsCache();
+      return cached ? filterLessons(cached, category, searchTerm) : undefined;
     },
     staleTime: 1000 * 60 * 5, // 5 min
   });

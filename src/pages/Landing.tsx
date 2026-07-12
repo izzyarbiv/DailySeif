@@ -16,7 +16,7 @@ const fallbackTodayLesson = {
 
 export default function Landing() {
   const { user, isAdmin } = useAuth();
-  const { data: lessons = [] } = useLessons();
+  const { data: lessons = [], isLoading } = useLessons();
 
   const todayLesson = lessons[0] || null;
   const recentLessons = lessons.slice(0, 6);
@@ -162,7 +162,21 @@ export default function Landing() {
                   </Link>
                 </div>
 
-                {recentLessons.length === 0 ? (
+                {isLoading && recentLessons.length === 0 ? (
+                  <div className="space-y-3">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="rounded-2xl bg-white border border-[#e1e7ef] p-4">
+                        <div className="flex items-start gap-3 animate-pulse">
+                          <div className="h-10 w-10 rounded-xl bg-[#e9f1fb] flex-shrink-0" />
+                          <div className="flex-1 space-y-2 py-1">
+                            <div className="h-3 w-24 bg-[#eef2f7] rounded" />
+                            <div className="h-4 w-40 bg-[#eef2f7] rounded" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : recentLessons.length === 0 ? (
                   <p className="text-sm text-[#65758b]">No lessons published yet.</p>
                 ) : (
                   <div className="space-y-3">
@@ -217,7 +231,18 @@ export default function Landing() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentLessons.length === 0 ? (
+              {isLoading && recentLessons.length === 0 ? (
+                [0, 1, 2].map((i) => (
+                  <div key={i} className="rounded-2xl bg-white border border-[#e1e7ef] overflow-hidden shadow-sm">
+                    <div className="aspect-[16/9] bg-[#eef2f7] animate-pulse" />
+                    <div className="p-4 space-y-2 animate-pulse">
+                      <div className="h-3 w-24 bg-[#eef2f7] rounded" />
+                      <div className="h-4 w-3/4 bg-[#eef2f7] rounded" />
+                      <div className="h-3 w-full bg-[#eef2f7] rounded" />
+                    </div>
+                  </div>
+                ))
+              ) : recentLessons.length === 0 ? (
                 <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-[#e1e7ef] bg-[#f8fafc] p-6 text-[#65758b]">
                   No lessons available yet.
                 </div>
