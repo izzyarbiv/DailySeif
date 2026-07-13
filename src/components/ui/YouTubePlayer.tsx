@@ -12,6 +12,7 @@ interface YTPlayer {
   getIframe(): HTMLIFrameElement;
   destroy(): void;
   setPlaybackQuality(q: string): void;
+  setPlaybackQualityRange?(min: string, max: string): void;
   getPlaybackQuality(): string;
   getAvailableQualityLevels(): string[];
   loadModule(m: string): void;
@@ -31,8 +32,17 @@ declare global {
 }
 
 const QUALITY_LABELS: Record<string, string> = {
+  highres: '4K+', hd2160: '4K', hd1440: '1440p',
   hd1080: '1080p', hd720: '720p', large: '480p', medium: '360p', small: '240p', tiny: '144p',
 };
+
+// setPlaybackQuality alone is ignored by modern YouTube (it auto-picks by
+// player size); the quality range API actually pins it.
+function applyQuality(p: YTPlayer | null, q: string) {
+  if (!p) return;
+  try { p.setPlaybackQualityRange?.(q, q); } catch { /* older players */ }
+  try { p.setPlaybackQuality(q); } catch { /* ignore */ }
+}
 
 const ytReadyCallbacks: (() => void)[] = [];
 let ytLoading = false;
@@ -95,11 +105,14 @@ export default function YouTubePlayer({ url, initialTime, onTimeUpdate }: Props)
   const [quality, setQuality] = useState('');
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
   const [showQuality, setShowQuality] = useState(false);
+  // Default to the best available quality once per video load
+  const bestForced = useRef(false);
 
   const videoId = extractVideoId(url);
 
   useEffect(() => {
     if (!videoId || !mountRef.current) return;
+    bestForced.current = false;
     const el = document.createElement('div');
     mountRef.current.appendChild(el);
 
@@ -110,6 +123,7 @@ export default function YouTubePlayer({ url, initialTime, onTimeUpdate }: Props)
         playerVars: {
           controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3,
           cc_load_policy: 0, origin: window.location.origin, enablejsapi: 1,
+          vq: 'hd1080',
         },
         events: {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,8 +149,16 @@ export default function YouTubePlayer({ url, initialTime, onTimeUpdate }: Props)
               if (d > 0) setDuration(d);
               // Fetch available qualities once playing
               const q = playerRef.current?.getAvailableQualityLevels() ?? [];
-              setAvailableQualities(q.filter((x: string) => x !== 'auto' && x !== 'default'));
-              setQuality(playerRef.current?.getPlaybackQuality() ?? '');
+              const usable = q.filter((x: string) => x !== 'auto' && x !== 'default');
+              setAvailableQualities(usable);
+              // Force the best available quality (list is ordered best-first)
+              if (!bestForced.current && usable.length > 0) {
+                bestForced.current = true;
+                applyQuality(playerRef.current, usable[0]);
+                setQuality(usable[0]);
+              } else {
+                setQuality(playerRef.current?.getPlaybackQuality() ?? '');
+              }
               tickRef.current = setInterval(() => {
                 const t = playerRef.current?.getCurrentTime() ?? 0;
                 setCurrent(t);
@@ -195,7 +217,7 @@ export default function YouTubePlayer({ url, initialTime, onTimeUpdate }: Props)
   };
 
   const changeQuality = (q: string) => {
-    playerRef.current?.setPlaybackQuality(q);
+    applyQuality(playerRef.current, q);
     setQuality(q);
     setShowQuality(false);
   };

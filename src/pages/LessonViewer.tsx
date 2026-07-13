@@ -239,13 +239,19 @@ export default function LessonViewer() {
                 .split('?')[0];
               const showVideo = !lesson.videoUrl && mediaTab === 'video';
               const src = `${base}${showVideo ? '/video' : ''}${spotifySeek > 0 ? `?t=${spotifySeek}` : ''}`;
+              // Full-size player for video — a bigger playback surface makes
+              // Spotify's adaptive streaming serve a higher resolution
               return (
-                <div className="rounded-2xl overflow-hidden shadow-lg">
+                <div
+                  className="rounded-2xl overflow-hidden shadow-lg relative"
+                  style={showVideo ? { aspectRatio: '16/10' } : undefined}
+                >
                   <iframe
                     key={`${showVideo ? 'video' : 'audio'}-${spotifySeek}`}
                     src={src}
                     width="100%"
-                    height={showVideo ? 352 : 152}
+                    height={showVideo ? undefined : 152}
+                    className={showVideo ? 'absolute inset-0 h-full w-full' : undefined}
                     style={{ border: 'none' }}
                     allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                     loading="lazy"
